@@ -5,7 +5,8 @@ Auto=read.csv("C:/R/R_Files/Automobile.csv")
 View(Auto)
 names(Auto)
 str(Auto)
-sapply(Auto,function(x) sum(is.na(x)))
+sapply(Auto,function(x) sum(is.na(x))) 
+# No missing values shown as the missing-values are in the form of '?' -Question mark.
 #####Replacing Special Character(?) with NA
 Auto$num.of.doors=as.factor(Auto$num.of.doors)
 Auto$symboling=as.factor(Auto$symboling)
@@ -23,20 +24,26 @@ sapply(Auto,function(x) sum(is.na(x)))
 ###OR
 sapply(Auto, function(x) sum(length(which(is.na(x)))))  
 ###Replace NA with Mean
-Auto$normalized.losses[is.na(Auto$normalized.losses)]=mean(Auto$normalized.losses[!is.na(Auto$normalized.losses)])
-Auto$bore[is.na(Auto$bore)]=mean(Auto$bore[!is.na(Auto$bore)])
-Auto$stroke[is.na(Auto$stroke)]=mean(Auto$stroke[!is.na(Auto$stroke)])
-Auto$horsepower[is.na(Auto$horsepower)]=mean(Auto$horsepower[!is.na(Auto$horsepower)])
-Auto$peak.rpm[is.na(Auto$peak.rpm)]=mean(Auto$peak.rpm[!is.na(Auto$peak.rpm)])
-Auto$price[is.na(Auto$price)]=mean(Auto$price[!is.na(Auto$price)])
-Auto$num.of.doors[is.na(Auto$num.of.doors)]=mode(Auto$num.of.doors)
-View(Auto)
+#Replacing missing values with Mean and Mode depends on condition whether it is Numeric or Categorical respectively.
+for(i in 2:ncol(Auto)){
+  if (is.numeric(Auto[,i]))
+  {
+    #print('Numeric')
+    Auto[is.na(Auto[,i]), i] <- mean(Auto[,i], na.rm = TRUE)
+  }
+  else
+  {
+    #print('Catogorical')
+    Auto[is.na(Auto[,i]), i] <- mode(Auto[,i])
+  }
+}
 sapply(Auto,function(x) sum(is.na(x)))
 ##Making a subset of all the numerical values in the dataset
 Automob<-(Auto[c("normalized.losses","wheel.base","length","width","height","curb.weight",
                  "engine.size","bore","stroke","compression.ratio","horsepower","peak.rpm",
                  "city.mpg","highway.mpg","price")])
 Automob
+#Data Normalization - HISTOGRAM
 library(rcompanion)
 T_log = log(Automob)
 plotNormalHistogram(T_log)
@@ -53,6 +60,7 @@ plotNormalHistogram(T_log)
 #                  "engine.size","bore","stroke","compression.ratio","horsepower","peak.rpm",
 #                  "city.mpg","highway.mpg","price")])
 # Automob
+# Data was more Normalized when replaced by Mean instead of Median.
 # library(rcompanion)
 # T_log = log(Automob)
 # plotNormalHistogram(Automob)
@@ -71,7 +79,7 @@ sapply(Auto,function(x) sum(is.na(x)))
 boxplot(Auto$price)
 ###CORRELATION
 cor(Automob)
-###Simple Logistic Regression
+###Logistic Regression Model
 ###y=symboling where 0-"less-risky"  & 1-"more-risky"
 #Splitting the Dataset in 70:30 ratio
 #2-ways
@@ -85,27 +93,14 @@ library(caTools)
 spl=sample.split(Auto$symboling,0.7)
 training=subset(Auto,spl==TRUE)
 testing=subset(Auto, spl==FALSE)
-#Here CA variables are:make,aspiration,num.of.doors,drive.wheels
-#Applying Reference to all the CA variables left.
-table(Auto$make)
-table(Auto$aspiration)
-table(Auto$num.of.doors)
-table(Auto$fuel.type)
-table(Auto$body.style)
-table(Auto$drive.wheels)
-table(Auto$engine.location)
-table(Auto$engine.type)
-table(Auto$num.of.cylinders)
-table(Auto$fuel.system)
+#GLM (Logistic Regression Model)
 logit<-step(glm(symboling ~normalized.losses+wheel.base+length+width+height+curb.weight+engine.size+
-             bore+stroke+compression.ratio+horsepower+peak.rpm+city.mpg+highway.mpg+price+
-             relevel(aspiration,ref='turbo') + relevel(make,ref='renault')+relevel(fuel.type,ref='diesel')+
-             relevel(body.style,ref='convertible')+relevel(engine.location,ref='rear')+
-             relevel(engine.type,ref='dohcv')+relevel(num.of.cylinders,ref='three')+relevel(fuel.system,ref='idi')+
-             relevel(num.of.doors,ref='two')+relevel(drive.wheels,ref='4wd'),data=Auto,family='binomial'))
+                  bore+stroke+compression.ratio+horsepower+peak.rpm+city.mpg+highway.mpg+price+
+                  aspiration+make+fuel.type+body.style+engine.location+engine.type+num.of.cylinders+
+                  fuel.system+num.of.doors+drive.wheels,data=Auto,family='binomial'))
 summary(logit)
 ###Remaining variables after step function
-###Model
+###Model 
 logit<-glm(symboling ~ wheel.base + length + width + engine.size + compression.ratio +horsepower +
            city.mpg + highway.mpg + aspiration +num.of.doors+drive.wheels,data=Auto,family='binomial')
 ###Summary of Model
@@ -142,4 +137,4 @@ plot(ROCRperf)
 library(ROCR) #how much data are we explaining
 pred=prediction(testing.probs,testing$symboling)
 as.numeric(performance(pred,'auc')@y.values)
-Accuracy=0.8907563
+Accuracy=0.8445378
